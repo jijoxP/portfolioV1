@@ -1,86 +1,129 @@
-    <!DOCTYPE html>
-    <html lang="fr">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Jeu Kaboom - Carré Joueur</title>
-        <script src="https://unpkg.com/kaboom/dist/kaboom.js"></script>
-    </head>
-    <body>
-    <script>
-        // Initialisation de Kaboom
-        kaboom({
-            width: window.innerWidth,
-            height: window.innerHeight,
-            background: [20, 20, 40], // fond plus doux
-        });
-        loadSprite("tree", "assets/tree.png"); // arbre
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jeu Kaboom - Carré Joueur</title>
+    <script src="https://unpkg.com/kaboom/dist/kaboom.js"></script>
+</head>
+<body>
+<script>
+kaboom({
+    width: window.innerWidth,
+    height: window.innerHeight,
+    background: [20, 20, 40],
+});
 
+loadSprite("tree", "assets/tree.png");
+loadSprite("hero", "https://raw.githubusercontent.com/jijoxP/portfolioV1/refs/heads/main/assets/hero.png", {
+    sliceX: 10,
+    anims: {
+        run2: { from: 6, to: 9, speed: 10, loop: true },
+        run: { from: 2, to: 5, speed: 10, loop: true },
+        idle: { from: 0, to: 1, speed: 3, loop: true },
+    }
+});
 
-        // Gravité
-        setGravity(2400);
+setGravity(2400);
+const SPEED = 200;
 
-    // Sol
-    add([
-        rect(width(), 48),
-        pos(0, height() - 48),
-        color(100, 0, 150),
-        area(),
-        body({ isStatic: true }),
-    ]);
-        // Ajouter le joueur comme un carré
-        const player = add([
-            rect(48, 48),        // carré 48x48
-            pos(120, 300),
-            color(255, 165, 0),    // rouge
+// --- Fonction utilitaire pour créer des objets depuis JSON ---
+function createObject(obj, player) {
+    if(obj.type === "ground") {
+        add([
+            rect(obj.width, obj.height),
+            pos(obj.x, obj.y),
+            color(...obj.color),
             area(),
-            body()
+            body({ isStatic: true })
         ]);
-        
-    // Objet interactif
-    const portfolioButton = add([
-        rect(64, 64),
-        pos(600, height() - 175),
-        color(0, 255, 0),
-        area(),
-        "interactive"
-    ]);
-
-    // Indication visuelle
-    add([
-        text("Projets", { size: 16 }),
-        pos(portfolioButton.pos.x - 0, portfolioButton.pos.y - 30),
-        color(255, 255, 255)
-    ]);
-
-    player.onCollide("interactive", () => {
-        window.open("projets.html", "_blank");
-    });
-
-    // Caméra et sauvegarde
-    onUpdate(() => {
-        camPos(player.pos);
-        localStorage.setItem("playerX", player.pos.x);
-        localStorage.setItem("playerY", player.pos.y);
-    });
-
-    player.onGround(() => {
-    shake(4); // petit effet de tremblement à l’atterrissage
-    });
-    // Déplacements
-    const SPEED = 200;
-    onKeyDown("left", () => player.move(-SPEED, 0));
-    onKeyDown("right", () => player.move(SPEED, 0));
-    onKeyPress("space", () => player.jump());
-
-    // Changement de couleur lors du saut
-    player.onUpdate(() => {
-        if (!player.isGrounded()) {
-            player.color = rgb(255, 255, 0);
-        } else {
-            player.color = rgb(255, 165, 0);
+    }
+    if(obj.type === "interactive") {
+        const o = add([
+            rect(obj.width, obj.height),
+            pos(obj.x, obj.y),
+            color(...obj.color),
+            area(),
+            "interactive"
+        ]);
+        if(obj.text) {
+            add([
+                text(obj.text, { size: 16 }),
+                pos(obj.x, obj.y - 30),
+                color(255,255,255)
+            ]);
         }
-    });
-    </script>
-    </body>
-    </html>
+        player.onCollide("interactive", () => go(obj.action));
+    }
+}
+
+// --- Chargement du JSON externe ---
+fetch("levels.json")
+    .then(res => res.json())
+    .then(data => {
+        const levelsJSON = data;
+
+        // --- Génération de la scène principale depuis JSON ---
+        scene("main", () => {
+            const levelData = levelsJSON.levels.find(l => l.name === "main");
+
+            // Joueur
+            const player = add([
+                sprite("hero"),
+                pos(levelData.playerStart.x, levelData.playerStart.y),
+                area(),
+                body(),
+                scale(1.5)
+            ]);
+            player.play("idle");
+
+            // Objets
+            levelData.objects.forEach(obj => createObject(obj, player));
+
+            // Déplacements
+            let dir = 0;
+            onKeyDown("left", () => dir = -1);
+            onKeyDown("right", () => dir = 1);
+            onKeyRelease("left", () => { if(dir === -1) dir = 0; });
+            onKeyRelease("right", () => { if(dir === 1) dir = 0; });
+
+            onKeyPress("space", () => {
+                if(player.isGrounded()) player.jump(SPEED*2.5);
+            });
+
+            player.onUpdate(() => {
+                player.move(dir*SPEED, 0);
+                if(dir === 1 && player.curAnim() !== "run") player.play("run");
+                else if(dir === -1 && player.curAnim() !== "run2") player.play("run2");
+                else if(dir === 0 && player.isGrounded() && player.curAnim() !== "idle") player.play("idle");
+            });
+
+            player.onGround(() => shake(4));
+            onUpdate(() => camPos(player.pos));
+        });
+
+        // --- Génération de la scène Portfolio depuis JSON ---
+        scene("portfolio", () => {
+            const sceneData = levelsJSON.portfolioScene;
+            sceneData.texts.forEach(t => {
+                add([
+                    text(t.content, { size: t.size }),
+                    pos(
+                        t.x === "center" ? center().x : t.x,
+                        t.y === "center" ? center().y : (typeof t.y === "string" && t.y.includes("+") ? center().y + parseInt(t.y.split("+")[1]) : t.y)
+                    ),
+                    anchor("center"),
+                    color(...t.color)
+                ]);
+            });
+
+            onKeyPress("escape", () => go("main"));
+        });
+
+        go("main");
+    })
+    .catch(err => console.error("Erreur chargement JSON:", err));
+
+</script>
+</body>
+</html>
