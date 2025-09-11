@@ -1,0 +1,90 @@
+    <!DOCTYPE html>
+    <html lang="fr">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Jeu Kaboom - Carré Joueur</title>
+        <script src="https://unpkg.com/kaboom/dist/kaboom.js"></script>
+    </head>
+    <body>
+    <script>
+        // Initialisation de Kaboom
+        kaboom({
+            width: window.innerWidth,
+            height: window.innerHeight,
+            background: [20, 20, 40], // fond plus doux
+        });
+        loadSprite("tree", "assets/tree.png"); // arbre
+        loadSprite("cloud", "assets/cloud.png"); // nuage
+
+
+        // Gravité
+        setGravity(2400);
+
+    // Sol
+    add([
+        rect(width(), 48),
+        pos(0, height() - 48),
+        color(100, 0, 150),
+        area(),
+        body({ isStatic: true }),
+    ]);
+        // Ajouter le joueur comme un carré
+        const player = add([
+            rect(48, 48),        // carré 48x48
+            pos(120, 300),
+            color(255, 165, 0),    // rouge
+            area(),
+            body()
+        ]);
+        
+    // Objet interactif
+    const portfolioButton = add([
+        rect(64, 64),
+        pos(600, height() - 175),
+        color(0, 255, 0),
+        area(),
+        "interactive"
+    ]);
+
+    // Indication visuelle
+    add([
+        text("Projets", { size: 16 }),
+        pos(portfolioButton.pos.x - 0, portfolioButton.pos.y - 30),
+        color(255, 255, 255)
+    ]);
+
+    player.onCollide("interactive", () => {
+        window.open("projets.html", "_blank");
+    });
+
+    // Caméra et sauvegarde
+    onUpdate(() => {
+        camPos(player.pos);
+        localStorage.setItem("playerX", player.pos.x);
+        localStorage.setItem("playerY", player.pos.y);
+    });
+
+    player.onGround(() => {
+    shake(4); // petit effet de tremblement à l’atterrissage
+    });
+    // Déplacements
+    const SPEED = 200;
+    onKeyDown("left", () => player.move(-SPEED, 0));
+    onKeyDown("right", () => player.move(SPEED, 0));
+    onKeyPress("space", () => player.jump());
+
+    // Changement de couleur lors du saut
+    player.onUpdate(() => {
+        const t = time(); // temps écoulé
+        const scaleAmount = 1 + 0.1 * Math.sin(t * 2); // 0.1 = amplitude, 2 = vitesse
+        player.scale = vec2(scaleAmount, scaleAmount);
+        if (!player.isGrounded()) {
+            player.color = rgb(255, 255, 0);
+        } else {
+            player.color = rgb(255, 165, 0);
+        }
+    });
+    </script>
+    </body>
+    </html>
