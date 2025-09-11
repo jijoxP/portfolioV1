@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Jeu Kaboom - Plateforme mobile vers cube</title>
+    <title>Jeu Kaboom - Plateforme mobile vers shop</title>
     <script src="https://unpkg.com/kaboom/dist/kaboom.js"></script>
 </head>
 <body>
@@ -20,6 +20,14 @@ loadSprite("hero", "https://raw.githubusercontent.com/jijoxP/portfolioV1/refs/he
         run2: { from: 6, to: 9, speed: 10, loop: true },
         run: { from: 2, to: 5, speed: 10, loop: true },
         idle: { from: 0, to: 1, speed: 3, loop: true },
+    }
+});
+
+// --- Sprite animé du shop (remplacez par le vrai sprite du shop Oak Woods) ---
+loadSprite("shop", "https://raw.githubusercontent.com/jijoxP/portfolioV1/refs/heads/main/assets/shop_anim.png", {
+    sliceX: 4, // nombre de frames horizontales
+    anims: {
+        open: { from: 0, to: 3, speed: 4, loop: false } // vitesse naturelle, ne boucle pas
     }
 });
 
@@ -47,7 +55,7 @@ scene("main", () => {
     ]);
     player.play("idle");
 
-    // --- Plateforme fixe sous le cube vert ---
+    // Plateforme fixe sous le shop
     const fixedPlatform = add([
         rect(200, 20),
         pos(500, 400),
@@ -56,21 +64,23 @@ scene("main", () => {
         body({ isStatic: true })
     ]);
 
-    // Cube vert sur la plateforme fixe
-    const portfolioButton = add([
-        rect(64,64),
-        pos(fixedPlatform.pos.x + 68, fixedPlatform.pos.y - 64),
-        color(0,255,0),
+    // --- Shop animé sur la plateforme fixe ---
+    const shopButton = add([
+        sprite("shop"),
+        pos(fixedPlatform.pos.x + 50, fixedPlatform.pos.y - 64),
         area(),
+        scale(2),
         "interactive"
     ]);
+    shopButton.play("open"); // animation qui se joue normalement
+
     add([
-        text("Projets",{ size:16 }),
-        pos(portfolioButton.pos.x, portfolioButton.pos.y - 30),
+        text("Shop",{ size:16 }),
+        pos(shopButton.pos.x, shopButton.pos.y - 30),
         color(255,255,255)
     ]);
 
-    // --- Plateforme mobile menant au cube ---
+    // Plateforme mobile
     const movingPlatform = add([
         rect(200, 20),
         pos(150, 550),
@@ -84,7 +94,6 @@ scene("main", () => {
     const platformSpeed = 1000;
 
     onUpdate(() => {
-        // déplacement plateforme mobile
         movingPlatform.move(platformSpeed * dir * dt(), 0);
         if(movingPlatform.pos.x < 100) dir = 1;
         if(movingPlatform.pos.x > 400) dir = -1;
@@ -109,7 +118,7 @@ scene("main", () => {
     player.onGround(() => shake(4));
     onUpdate(() => camPos(player.pos));
 
-    // Interaction avec le cube
+    // Interaction avec le shop
     player.onCollide("interactive", () => go("portfolio"));
 });
 
