@@ -1,0 +1,18 @@
+{
+  "levels": [
+    {
+      "name": "main",
+      "playerStart": { "x": 200, "y": 400 },
+      "objects": [
+        { "type": "ground", "x": 0, "y": 552, "width": 800, "height": 48, "color": [100,0,150] },
+        { "type": "interactive", "x": 600, "y": 400, "width": 64, "height": 64, "color": [0,255,0], "action": "portfolio", "text": "Projets" }
+      ]
+    }
+  ],
+  "portfolioScene": {
+    "texts": [
+      { "content": "Bienvenue dans la scène Portfolio !", "x": "center", "y": "center", "size": 32, "color": [255,255,0] },
+      { "content": "Appuyez sur Echap pour revenir", "x": "center", "y": "center+60", "size": 16, "color": [255,255,255] }
+    ]
+  }
+}
