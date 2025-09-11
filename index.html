@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Jeu Kaboom - Carré Joueur</title>
+    <title>Jeu Kaboom - Plateforme mobile vers cube</title>
     <script src="https://unpkg.com/kaboom/dist/kaboom.js"></script>
 </head>
 <body>
@@ -14,7 +14,6 @@ kaboom({
     background: [20, 20, 40],
 });
 
-loadSprite("tree", "assets/tree.png");
 loadSprite("hero", "https://raw.githubusercontent.com/jijoxP/portfolioV1/refs/heads/main/assets/hero.png", {
     sliceX: 10,
     anims: {
@@ -24,106 +23,115 @@ loadSprite("hero", "https://raw.githubusercontent.com/jijoxP/portfolioV1/refs/he
     }
 });
 
-setGravity(2400);
+setGravity(2000);
 const SPEED = 200;
 
-// --- Fonction utilitaire pour créer des objets depuis JSON ---
-function createObject(obj, player) {
-    if(obj.type === "ground") {
-        add([
-            rect(obj.width, obj.height),
-            pos(obj.x, obj.y),
-            color(...obj.color),
-            area(),
-            body({ isStatic: true })
-        ]);
-    }
-    if(obj.type === "interactive") {
-        const o = add([
-            rect(obj.width, obj.height),
-            pos(obj.x, obj.y),
-            color(...obj.color),
-            area(),
-            "interactive"
-        ]);
-        if(obj.text) {
-            add([
-                text(obj.text, { size: 16 }),
-                pos(obj.x, obj.y - 30),
-                color(255,255,255)
-            ]);
-        }
-        player.onCollide("interactive", () => go(obj.action));
-    }
-}
+scene("main", () => {
 
-// --- Chargement du JSON externe ---
-fetch("levels.json")
-    .then(res => res.json())
-    .then(data => {
-        const levelsJSON = data;
+    // Sol
+    add([
+        rect(width(), 48),
+        pos(0, height() - 48),
+        color(100,0,150),
+        area(),
+        body({ isStatic: true })
+    ]);
 
-        // --- Génération de la scène principale depuis JSON ---
-        scene("main", () => {
-            const levelData = levelsJSON.levels.find(l => l.name === "main");
+    // Joueur
+    const player = add([
+        sprite("hero"),
+        pos(100, 400),
+        area(),
+        body(),
+        scale(1.5)
+    ]);
+    player.play("idle");
 
-            // Joueur
-            const player = add([
-                sprite("hero"),
-                pos(levelData.playerStart.x, levelData.playerStart.y),
-                area(),
-                body(),
-                scale(1.5)
-            ]);
-            player.play("idle");
+    // --- Plateforme fixe sous le cube vert ---
+    const fixedPlatform = add([
+        rect(200, 20),
+        pos(500, 400),
+        color(0,0,255),
+        area(),
+        body({ isStatic: true })
+    ]);
 
-            // Objets
-            levelData.objects.forEach(obj => createObject(obj, player));
+    // Cube vert sur la plateforme fixe
+    const portfolioButton = add([
+        rect(64,64),
+        pos(fixedPlatform.pos.x + 68, fixedPlatform.pos.y - 64),
+        color(0,255,0),
+        area(),
+        "interactive"
+    ]);
+    add([
+        text("Projets",{ size:16 }),
+        pos(portfolioButton.pos.x, portfolioButton.pos.y - 30),
+        color(255,255,255)
+    ]);
 
-            // Déplacements
-            let dir = 0;
-            onKeyDown("left", () => dir = -1);
-            onKeyDown("right", () => dir = 1);
-            onKeyRelease("left", () => { if(dir === -1) dir = 0; });
-            onKeyRelease("right", () => { if(dir === 1) dir = 0; });
+    // --- Plateforme mobile menant au cube ---
+    const movingPlatform = add([
+        rect(200, 20),
+        pos(150, 550),
+        color(150, 75, 0),
+        area(),
+        body({ isStatic: true }),
+        "platform"
+    ]);
 
-            onKeyPress("space", () => {
-                if(player.isGrounded()) player.jump(SPEED*2.5);
-            });
+    let dir = 1;
+    const platformSpeed = 1000;
 
-            player.onUpdate(() => {
-                player.move(dir*SPEED, 0);
-                if(dir === 1 && player.curAnim() !== "run") player.play("run");
-                else if(dir === -1 && player.curAnim() !== "run2") player.play("run2");
-                else if(dir === 0 && player.isGrounded() && player.curAnim() !== "idle") player.play("idle");
-            });
+    onUpdate(() => {
+        // déplacement plateforme mobile
+        movingPlatform.move(platformSpeed * dir * dt(), 0);
+        if(movingPlatform.pos.x < 100) dir = 1;
+        if(movingPlatform.pos.x > 400) dir = -1;
+    });
 
-            player.onGround(() => shake(4));
-            onUpdate(() => camPos(player.pos));
-        });
+    // Déplacements du joueur
+    let moveDir = 0;
+    onKeyDown("left", () => moveDir = -1);
+    onKeyDown("right", () => moveDir = 1);
+    onKeyRelease("left", () => { if(moveDir === -1) moveDir = 0; });
+    onKeyRelease("right", () => { if(moveDir === 1) moveDir = 0; });
 
-        // --- Génération de la scène Portfolio depuis JSON ---
-        scene("portfolio", () => {
-            const sceneData = levelsJSON.portfolioScene;
-            sceneData.texts.forEach(t => {
-                add([
-                    text(t.content, { size: t.size }),
-                    pos(
-                        t.x === "center" ? center().x : t.x,
-                        t.y === "center" ? center().y : (typeof t.y === "string" && t.y.includes("+") ? center().y + parseInt(t.y.split("+")[1]) : t.y)
-                    ),
-                    anchor("center"),
-                    color(...t.color)
-                ]);
-            });
+    onKeyPress("space", () => { if(player.isGrounded()) player.jump(SPEED*5 ); });
 
-            onKeyPress("escape", () => go("main"));
-        });
+    player.onUpdate(() => {
+        player.move(moveDir*200,0);
+        if(moveDir === 1 && player.curAnim() !== "run") player.play("run");
+        else if(moveDir === -1 && player.curAnim() !== "run2") player.play("run2");
+        else if(moveDir === 0 && player.isGrounded() && player.curAnim() !== "idle") player.play("idle");
+    });
 
-        go("main");
-    })
-    .catch(err => console.error("Erreur chargement JSON:", err));
+    player.onGround(() => shake(4));
+    onUpdate(() => camPos(player.pos));
 
+    // Interaction avec le cube
+    player.onCollide("interactive", () => go("portfolio"));
+});
+
+// --- SCÈNE PORTFOLIO ---
+scene("portfolio", () => {
+    add([
+        text("Bienvenue dans la scène Portfolio !", { size: 32 }),
+        pos(center()),
+        anchor("center"),
+        color(255,255,0)
+    ]);
+    add([
+        text("Appuyez sur Echap pour revenir", { size: 16 }),
+        pos(center().x, center().y + 60),
+        anchor("center"),
+        color(255,255,255)
+    ]);
+
+    onKeyPress("escape", () => go("main"));
+});
+
+go("main");
 </script>
 </body>
 </html>
