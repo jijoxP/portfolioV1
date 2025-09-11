@@ -15,7 +15,7 @@
             background: [20, 20, 40], // fond plus doux
         });
         loadSprite("tree", "assets/tree.png"); // arbre
-        loadSprite("cloud", "assets/cloud.png"); // nuage
+        loadSprite("https://raw.githubusercontent.com/jijoxP/portfolioV1/refs/heads/main/assets/Cloud.png?token=GHSAT0AAAAAADK6HRUTAZ6G43D56L6446YA2GCN6VQ"); // nuage
 
 
         // Gravité
@@ -76,9 +76,6 @@
 
     // Changement de couleur lors du saut
     player.onUpdate(() => {
-        const t = time(); // temps écoulé
-        const scaleAmount = 1 + 0.1 * Math.sin(t * 2); // 0.1 = amplitude, 2 = vitesse
-        player.scale = vec2(scaleAmount, scaleAmount);
         if (!player.isGrounded()) {
             player.color = rgb(255, 255, 0);
         } else {
