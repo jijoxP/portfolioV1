@@ -1,10 +1,9 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Jeu Kaboom - Projectile Sprite</title>
-    <script src="https://unpkg.com/kaboom/dist/kaboom.js"></script>
+  <meta charset="UTF-8">
+  <title>Portfolio HUB</title>
+  <script src="https://unpkg.com/kaboom/dist/kaboom.js"></script>
 </head>
 <body>
 <script>
@@ -14,94 +13,123 @@ kaboom({
     background: [20, 20, 40],
 });
 
-// --- SPRITES ---
-// Héros
+// Chargement des sprites
 loadSprite("hero", "https://raw.githubusercontent.com/jijoxP/portfolioV1/refs/heads/main/assets/hero.png", {
     sliceX: 10,
-    anims: {
-        run2: { from: 6, to: 9, speed: 30, loop: true },
-        run: { from: 2, to: 5, speed: 30, loop: true },
-        walk2: { from: 6, to: 9, speed: 10, loop: true },
-        walk : { from: 2, to: 5, speed: 10, loop: true },
-        idle: { from: 0, to: 1, speed: 3, loop: true },
-    }
+    anims: { idle: { from: 0, to: 1, speed: 3, loop: true }, walk: { from: 2, to: 5, speed: 10, loop: true }, walk2: { from: 6, to: 9, speed: 10, loop: true } }
 });
-
-// Portfolio
 loadSprite("portfolioSprite", "https://raw.githubusercontent.com/jijoxP/portfolioV1/refs/heads/main/portfolio%20spriteFerm%C3%A9.png");
-
 loadSprite("bullet", "https://raw.githubusercontent.com/jijoxP/portfolioV1/refs/heads/main/assets/All_Fire_Bullet_Pixel_16x16_07.png");
 
 setGravity(2000);
-const WALK_SPEED = 200;
-const RUN_SPEED = 400;
 
-scene("main", () => {
-    // Sol
-    add([
-        rect(width(), 48),
-        pos(0, height() - 48),
-        color(100,0,150),
-        area(),
-        body({ isStatic: true })
-    ]);
+// Charger la config JSON
+fetch("config.json")
+  .then(res => res.json())
+  .then(config => {
+    const WALK_SPEED = 200, RUN_SPEED = 400;
 
-    // Joueur
-    const player = add([
-        sprite("hero"),
-        pos(100, 400),
-        area(),
-        body(),
-        scale(1.5)
-    ]);
-    player.play("idle");
-
-    let moveDir = 0;
-    let canMove = true;
-
-    onKeyDown("left", () => { if(canMove) moveDir = -1; });
-    onKeyDown("right", () => { if(canMove) moveDir = 1; });
-    onKeyRelease("left", () => { if(moveDir === -1) moveDir = 0; });
-    onKeyRelease("right", () => { if(moveDir === 1) moveDir = 0; });
-
-    onKeyPress("space", () => { if(player.isGrounded() && canMove) player.jump(1000); });
-
-    // --- Projectile avec sprite (flèche ↑) ---
-    onKeyPress("up", () => {
-        const dir = moveDir >= 0 ? 1 : -1;
-        const projectile = add([
-            sprite("bullet"),
-            pos(player.pos.x + (dir * 20), player.pos.y + 10),
-            scale(2), // ajuste la taille
-            area(),
-            "projectile"
+    scene("main", () => {
+      // Plateformes
+      config.platforms.forEach(p => {
+        add([
+          rect(p.w, p.h),
+          pos(p.x, p.y),
+          color(...p.color),
+          area(),
+          body({ isStatic: p.static })
         ]);
+      });
 
-        // Déplacement du projectile
-        onUpdate(() => {
-            if(projectile.pos){
-                projectile.move(dir * 600, 0);
-            }
-        });
+      // Joueur
+      const player = add([
+        sprite("hero"),
+        pos(config.player.startX, config.player.startY),
+        scale(config.player.scale),
+        area(),
+        body()
+      ]);
+      player.play("idle");
 
-        // Auto-destruction après 2s
-        wait(2, () => destroy(projectile));
-    });
+      let moveDir = 0;
 
-    // Marche / Course
-    player.onUpdate(() => {
+      // Mouvements
+      onKeyDown("left", () => moveDir = -1);
+      onKeyDown("right", () => moveDir = 1);
+      onKeyRelease("left", () => { if(moveDir === -1) moveDir = 0; });
+      onKeyRelease("right", () => { if(moveDir === 1) moveDir = 0; });
+      onKeyPress("space", () => { if(player.isGrounded()) player.jump(1000); });
+
+      // Tir projectiles
+      onKeyPress("up", () => {
+        const dir = moveDir >= 0 ? 1 : -1;
+        const bullet = add([sprite("bullet"), pos(player.pos.x + dir * 20, player.pos.y + 10), scale(2), area(), "projectile"]);
+        bullet.onUpdate(() => bullet.move(dir * 600, 0));
+        wait(2, () => destroy(bullet));
+      });
+
+      // Caisses
+      onKeyPress("down", () => {
+        add([rect(50,50), pos(player.pos), color(255,0,0), area(), body(), "caisse"]);
+      });
+
+      // Projets
+      config.projects.forEach(proj => {
+        let obj;
+        if (proj.type === "sprite") {
+          obj = add([sprite(proj.sprite), pos(proj.x, proj.y), scale(proj.scale), proj.id]);
+        } else {
+          obj = add([rect(proj.w, proj.h), pos(proj.x, proj.y), color(...proj.color), area(), proj.id]);
+        }
+
+        // Respiration pour sprites
+        if (proj.type === "sprite") {
+          loop(1, () => {
+            obj.scale = vec2(proj.scale - 0.01, proj.scale - 0.01);
+            wait(0.5, () => obj.scale = vec2(proj.scale, proj.scale));
+          });
+        }
+
+        // Mouvement si défini
+        if (proj.moving) {
+          let dir = 1;
+          obj.onUpdate(() => {
+            obj.move(proj.moving.speed * dir, 0);
+            if (obj.pos.x > proj.moving.maxX) dir = -1;
+            if (obj.pos.x < proj.moving.minX) dir = 1;
+          });
+        }
+
+        // Ouverture scène
+        if (proj.id === "project2") {
+          onCollide("projectile", "project2", (b) => { destroy(b); go(proj.openScene); });
+        } else {
+          player.onCollide(proj.id, () => go(proj.openScene));
+        }
+      });
+
+      // Animation joueur
+      player.onUpdate(() => {
         let speed = isKeyDown("shift") ? RUN_SPEED : WALK_SPEED;
         player.move(moveDir * speed, 0);
-
         if(moveDir === 1 && player.curAnim() !== "walk") player.play("walk");
         else if(moveDir === -1 && player.curAnim() !== "walk2") player.play("walk2");
         else if(moveDir === 0 && player.isGrounded() && player.curAnim() !== "idle") player.play("idle");
+      });
+
+      onUpdate(() => camPos(player.pos));
     });
 
-    onUpdate(() => camPos(player.pos));
-});
+    // Scènes projets
+    config.projects.forEach(p => {
+      scene(p.openScene, () => {
+        add([text(`${p.id} ouvert !`, { size: 32 }), pos(center()), anchor("center"), color(255,255,0)]);
+        onKeyPress("escape", () => go("main"));
+      });
+    });
 
-go("main");
+    go("main");
+  });
 </script>
 </body>
 </html>

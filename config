@@ -1,0 +1,42 @@
+{
+  "player": {
+    "startX": 100,
+    "startY": 400,
+    "scale": 1.5
+  },
+  "platforms": [
+    { "x": 0, "y": 700, "w": 2000, "h": 48, "color": [100, 0, 150], "static": true },
+    { "x": 400, "y": 500, "w": 300, "h": 20, "color": [0, 0, 255], "static": true }
+  ],
+  "projects": [
+    {
+      "id": "project1",
+      "type": "sprite",
+      "sprite": "portfolioSprite",
+      "x": 480,
+      "y": 340,
+      "scale": 0.2,
+      "openScene": "project1Scene"
+    },
+    {
+      "id": "project2",
+      "type": "rect",
+      "w": 100,
+      "h": 100,
+      "x": 800,
+      "y": 300,
+      "color": [0, 255, 0],
+      "moving": { "minX": 600, "maxX": 1000, "speed": 100 },
+      "openScene": "project2Scene"
+    },
+    {
+      "id": "project3",
+      "type": "sprite",
+      "sprite": "portfolioSprite",
+      "x": 1620,
+      "y": 40,
+      "scale": 0.2,
+      "openScene": "project3Scene"
+    }
+  ]
+}
