@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Jeu Kaboom - Plateforme vers portfolio</title>
+    <title>Jeu Kaboom - Projectile Sprite</title>
     <script src="https://unpkg.com/kaboom/dist/kaboom.js"></script>
 </head>
 <body>
@@ -14,6 +14,8 @@ kaboom({
     background: [20, 20, 40],
 });
 
+// --- SPRITES ---
+// Héros
 loadSprite("hero", "https://raw.githubusercontent.com/jijoxP/portfolioV1/refs/heads/main/assets/hero.png", {
     sliceX: 10,
     anims: {
@@ -25,14 +27,16 @@ loadSprite("hero", "https://raw.githubusercontent.com/jijoxP/portfolioV1/refs/he
     }
 });
 
+// Portfolio
 loadSprite("portfolioSprite", "https://raw.githubusercontent.com/jijoxP/portfolioV1/refs/heads/main/portfolio%20spriteFerm%C3%A9.png");
+
+loadSprite("bullet", "https://raw.githubusercontent.com/jijoxP/portfolioV1/refs/heads/main/assets/All_Fire_Bullet_Pixel_16x16_07.png");
 
 setGravity(2000);
 const WALK_SPEED = 200;
 const RUN_SPEED = 400;
 
 scene("main", () => {
-
     // Sol
     add([
         rect(width(), 48),
@@ -41,56 +45,6 @@ scene("main", () => {
         area(),
         body({ isStatic: true })
     ]);
-
-    // Plateforme fixe sous le portfolio
-    const fixedPlatform = add([
-        rect(300, 20),
-        pos(500, 400),
-        color(0,0,255),
-        area(),
-        body({ isStatic: true })
-    ]);
-
-    // Portfolio avec respiration
-    const portfolioButton = add([
-        sprite("portfolioSprite"),
-        pos(fixedPlatform.pos.x + 50, fixedPlatform.pos.y - 160),
-        scale(0.2),
-        "interactive"
-    ]);
-
-    // Respiration : scale cyclique
-    loop(1, () => { // chaque seconde
-        portfolioButton.scale = vec2(0.19, 0.19); // gonfle légèrement
-        wait(0.5, () => {
-            portfolioButton.scale = vec2(0.2, 0.2); // revient à la normale
-        });
-    });
-
-    add([
-        text("Portfolio",{ size:16 }),
-        pos(portfolioButton.pos.x + 30, portfolioButton.pos.y - 30),
-        color(255,255,255)
-    ]);
-
-    // Plateforme mobile
-    const movingPlatform = add([
-        rect(200, 20),
-        pos(150, 550),
-        color(150, 75, 0),
-        area(),
-        body({ isStatic: true }),
-        "platform"
-    ]);
-
-    let dir = 1;
-    const platformSpeed = 1000;
-
-    onUpdate(() => {
-        movingPlatform.move(platformSpeed * dir * dt(), 0);
-        if(movingPlatform.pos.x < 100) dir = 1;
-        if(movingPlatform.pos.x > 400) dir = -1;
-    });
 
     // Joueur
     const player = add([
@@ -112,55 +66,26 @@ scene("main", () => {
 
     onKeyPress("space", () => { if(player.isGrounded() && canMove) player.jump(1000); });
 
-    // Tir d'une caisse
-    onKeyPress("down", () => {
-        add([
-            rect(50,50),
-            pos(player.pos.x, player.pos.y),
-            color(255,0,0),
-            area(),
-            body(),
-            "caisse"
-        ]);
-    });
-
-    // Tableau de projet
-    const projectBoard = add([
-        rect(100,100),
-        pos(800, 350),
-        color(0,255,0),
-        area(),
-        "projectBoard"
-    ]);
-
-    onCollide("caisse", "projectBoard", (p, board) => {
-        destroy(p);
-        go("projectScene");
-    });
-
-    // Tir d'une balle rectangulaire avec flèche haut
+    // --- Projectile avec sprite (flèche ↑) ---
     onKeyPress("up", () => {
         const dir = moveDir >= 0 ? 1 : -1;
         const projectile = add([
-            rect(20, 10),
+            sprite("bullet"),
             pos(player.pos.x + (dir * 20), player.pos.y + 10),
-            color(255, 255, 0),
+            scale(2), // ajuste la taille
             area(),
             "projectile"
         ]);
 
+        // Déplacement du projectile
         onUpdate(() => {
             if(projectile.pos){
-                projectile.move(dir * 100000 * dt(), 0);
+                projectile.move(dir * 600, 0);
             }
         });
 
+        // Auto-destruction après 2s
         wait(2, () => destroy(projectile));
-    });
-
-    onCollide("projectile", "projectBoard", (b, board) => {
-        destroy(b);
-        go("projectScene");
     });
 
     // Marche / Course
@@ -174,44 +99,6 @@ scene("main", () => {
     });
 
     onUpdate(() => camPos(player.pos));
-
-    player.onCollide("interactive", () => go("portfolio"));
-});
-
-// --- SCÈNE PORTFOLIO ---
-scene("portfolio", () => {
-    add([
-        text("Bienvenue dans la scène Portfolio !", { size: 32 }),
-        pos(center()),
-        anchor("center"),
-        color(255,255,0)
-    ]);
-    add([
-        text("Appuyez sur Echap pour revenir", { size: 16 }),
-        pos(center().x, center().y + 60),
-        anchor("center"),
-        color(255,255,255)
-    ]);
-
-    onKeyPress("escape", () => go("main"));
-});
-
-// --- SCÈNE PROJET ---
-scene("projectScene", () => {
-    add([
-        text("Projet ouvert !", { size: 32 }),
-        pos(center()),
-        anchor("center"),
-        color(0,255,255)
-    ]);
-    add([
-        text("Appuyez sur Echap pour revenir", { size: 16 }),
-        pos(center().x, center().y + 60),
-        anchor("center"),
-        color(255,255,255)
-    ]);
-
-    onKeyPress("escape", () => go("main"));
 });
 
 go("main");
