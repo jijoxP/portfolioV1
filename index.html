@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Jeu Kaboom - Plateforme mobile vers shop</title>
+    <title>Jeu Kaboom - Plateforme vers portfolio</title>
     <script src="https://unpkg.com/kaboom/dist/kaboom.js"></script>
 </head>
 <body>
@@ -17,22 +17,19 @@ kaboom({
 loadSprite("hero", "https://raw.githubusercontent.com/jijoxP/portfolioV1/refs/heads/main/assets/hero.png", {
     sliceX: 10,
     anims: {
-        run2: { from: 6, to: 9, speed: 10, loop: true },
-        run: { from: 2, to: 5, speed: 10, loop: true },
+        run2: { from: 6, to: 9, speed: 30, loop: true },
+        run: { from: 2, to: 5, speed: 30, loop: true },
+        walk2: { from: 6, to: 9, speed: 10, loop: true },
+        walk : { from: 2, to: 5, speed: 10, loop: true },
         idle: { from: 0, to: 1, speed: 3, loop: true },
     }
 });
 
-// --- Sprite animé du shop (remplacez par le vrai sprite du shop Oak Woods) ---
-loadSprite("shop", "https://raw.githubusercontent.com/jijoxP/portfolioV1/refs/heads/main/assets/shop_anim.png", {
-    sliceX: 4, // nombre de frames horizontales
-    anims: {
-        open: { from: 0, to: 3, speed: 4, loop: false } // vitesse naturelle, ne boucle pas
-    }
-});
+loadSprite("portfolioSprite", "https://raw.githubusercontent.com/jijoxP/portfolioV1/refs/heads/main/portfolio%20spriteFerm%C3%A9.png");
 
 setGravity(2000);
-const SPEED = 200;
+const WALK_SPEED = 200;
+const RUN_SPEED = 400;
 
 scene("main", () => {
 
@@ -45,38 +42,34 @@ scene("main", () => {
         body({ isStatic: true })
     ]);
 
-    // Joueur
-    const player = add([
-        sprite("hero"),
-        pos(100, 400),
-        area(),
-        body(),
-        scale(1.5)
-    ]);
-    player.play("idle");
-
-    // Plateforme fixe sous le shop
+    // Plateforme fixe sous le portfolio
     const fixedPlatform = add([
-        rect(200, 20),
+        rect(300, 20),
         pos(500, 400),
         color(0,0,255),
         area(),
         body({ isStatic: true })
     ]);
 
-    // --- Shop animé sur la plateforme fixe ---
-    const shopButton = add([
-        sprite("shop"),
-        pos(fixedPlatform.pos.x + 50, fixedPlatform.pos.y - 64),
-        area(),
-        scale(2),
+    // Portfolio avec respiration
+    const portfolioButton = add([
+        sprite("portfolioSprite"),
+        pos(fixedPlatform.pos.x + 50, fixedPlatform.pos.y - 160),
+        scale(0.2),
         "interactive"
     ]);
-    shopButton.play("open"); // animation qui se joue normalement
+
+    // Respiration : scale cyclique
+    loop(1, () => { // chaque seconde
+        portfolioButton.scale = vec2(0.19, 0.19); // gonfle légèrement
+        wait(0.5, () => {
+            portfolioButton.scale = vec2(0.2, 0.2); // revient à la normale
+        });
+    });
 
     add([
-        text("Shop",{ size:16 }),
-        pos(shopButton.pos.x, shopButton.pos.y - 30),
+        text("Portfolio",{ size:16 }),
+        pos(portfolioButton.pos.x + 30, portfolioButton.pos.y - 30),
         color(255,255,255)
     ]);
 
@@ -99,26 +92,89 @@ scene("main", () => {
         if(movingPlatform.pos.x > 400) dir = -1;
     });
 
-    // Déplacements du joueur
+    // Joueur
+    const player = add([
+        sprite("hero"),
+        pos(100, 400),
+        area(),
+        body(),
+        scale(1.5)
+    ]);
+    player.play("idle");
+
     let moveDir = 0;
-    onKeyDown("left", () => moveDir = -1);
-    onKeyDown("right", () => moveDir = 1);
+    let canMove = true;
+
+    onKeyDown("left", () => { if(canMove) moveDir = -1; });
+    onKeyDown("right", () => { if(canMove) moveDir = 1; });
     onKeyRelease("left", () => { if(moveDir === -1) moveDir = 0; });
     onKeyRelease("right", () => { if(moveDir === 1) moveDir = 0; });
 
-    onKeyPress("space", () => { if(player.isGrounded()) player.jump(SPEED*5 ); });
+    onKeyPress("space", () => { if(player.isGrounded() && canMove) player.jump(1000); });
 
+    // Tir d'une caisse
+    onKeyPress("down", () => {
+        add([
+            rect(50,50),
+            pos(player.pos.x, player.pos.y),
+            color(255,0,0),
+            area(),
+            body(),
+            "caisse"
+        ]);
+    });
+
+    // Tableau de projet
+    const projectBoard = add([
+        rect(100,100),
+        pos(800, 350),
+        color(0,255,0),
+        area(),
+        "projectBoard"
+    ]);
+
+    onCollide("caisse", "projectBoard", (p, board) => {
+        destroy(p);
+        go("projectScene");
+    });
+
+    // Tir d'une balle rectangulaire avec flèche haut
+    onKeyPress("up", () => {
+        const dir = moveDir >= 0 ? 1 : -1;
+        const projectile = add([
+            rect(20, 10),
+            pos(player.pos.x + (dir * 20), player.pos.y + 10),
+            color(255, 255, 0),
+            area(),
+            "projectile"
+        ]);
+
+        onUpdate(() => {
+            if(projectile.pos){
+                projectile.move(dir * 100000 * dt(), 0);
+            }
+        });
+
+        wait(2, () => destroy(projectile));
+    });
+
+    onCollide("projectile", "projectBoard", (b, board) => {
+        destroy(b);
+        go("projectScene");
+    });
+
+    // Marche / Course
     player.onUpdate(() => {
-        player.move(moveDir*200,0);
-        if(moveDir === 1 && player.curAnim() !== "run") player.play("run");
-        else if(moveDir === -1 && player.curAnim() !== "run2") player.play("run2");
+        let speed = isKeyDown("shift") ? RUN_SPEED : WALK_SPEED;
+        player.move(moveDir * speed, 0);
+
+        if(moveDir === 1 && player.curAnim() !== "walk") player.play("walk");
+        else if(moveDir === -1 && player.curAnim() !== "walk2") player.play("walk2");
         else if(moveDir === 0 && player.isGrounded() && player.curAnim() !== "idle") player.play("idle");
     });
 
-    player.onGround(() => shake(4));
     onUpdate(() => camPos(player.pos));
 
-    // Interaction avec le shop
     player.onCollide("interactive", () => go("portfolio"));
 });
 
@@ -129,6 +185,24 @@ scene("portfolio", () => {
         pos(center()),
         anchor("center"),
         color(255,255,0)
+    ]);
+    add([
+        text("Appuyez sur Echap pour revenir", { size: 16 }),
+        pos(center().x, center().y + 60),
+        anchor("center"),
+        color(255,255,255)
+    ]);
+
+    onKeyPress("escape", () => go("main"));
+});
+
+// --- SCÈNE PROJET ---
+scene("projectScene", () => {
+    add([
+        text("Projet ouvert !", { size: 32 }),
+        pos(center()),
+        anchor("center"),
+        color(0,255,255)
     ]);
     add([
         text("Appuyez sur Echap pour revenir", { size: 16 }),
