@@ -1,0 +1,24 @@
+{
+  "player": {
+    "startX": 100,
+    "startY": 400,
+    "scale": 1.5
+  },
+  "platforms": [
+    { "x": 0, "y": 550, "w": 2000, "h": 48, "color": [100, 0, 150], "static": true },
+    { "x": 400, "y": 450, "w": 300, "h": 20, "color": [0, 0, 255], "static": true },
+    { "x": 750, "y": 380, "w": 200, "h": 20, "color": [255, 0, 0], "static": true },
+    { "x": 1100, "y": 310, "w": 250, "h": 20, "color": [0, 255, 255], "static": true },
+    { "x": 1450, "y": 250, "w": 300, "h": 20, "color": [255, 255, 0], "static": true },
+    { "x": 1800, "y": 200, "w": 200, "h": 20, "color": [255, 0, 255], "static": true }
+  ],
+  "obstacles": [
+    { "type": "rect", "x": 600, "y": 420, "w": 50, "h": 20, "color": [255, 0, 0], "moving": { "minX": 600, "maxX": 800, "speed": 80 } },
+    { "type": "rect", "x": 1250, "y": 280, "w": 50, "h": 20, "color": [255, 0, 0], "moving": { "minX": 1200, "maxX": 1400, "speed": 100 } }
+  ],
+  "projects": [
+    { "id": "project1", "type": "sprite", "sprite": "portfolioSprite", "x": 480, "y": 420, "scale": 0.2, "openScene": "project1Scene" },
+    { "id": "project2", "type": "rect", "w": 100, "h": 100, "x": 850, "y": 350, "color": [0, 255, 0], "moving": { "minX": 800, "maxX": 1000, "speed": 100 }, "openScene": "project2Scene" },
+    { "id": "project3", "type": "sprite", "sprite": "portfolioSprite", "x": 1620, "y": 180, "scale": 0.2, "openScene": "project3Scene" }
+  ]
+}
