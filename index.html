@@ -1,21 +1,20 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-<meta charset="UTF-8">
-<title>Portfolio HUB</title>
-<script src="https://unpkg.com/kaboom/dist/kaboom.js"></script>
+  <meta charset="UTF-8">
+  <title>Portfolio HUB</title>
+  <script src="https://unpkg.com/kaboom/dist/kaboom.js"></script>
 </head>
 <body>
 <script>
-// --- Kaboom init ---
 kaboom({
   width: window.innerWidth,
   height: window.innerHeight,
   background: [20,20,40],
 });
 
-// --- Sprites principales ---
-loadSprite("hero", "https://raw.githubusercontent.com/jijoxP/portfolioV1/refs/heads/main/assets/hero.png", {
+// --- Sprites joueur ---
+loadSprite("hero", "assets/hero.png", {
   sliceX: 10,
   anims: {
     idle: { from: 0, to: 1, speed: 3, loop: true },
@@ -23,18 +22,30 @@ loadSprite("hero", "https://raw.githubusercontent.com/jijoxP/portfolioV1/refs/he
     walk2: { from: 6, to: 9, speed: 10, loop: true }
   }
 });
-loadSprite("portfolioSprite", "https://raw.githubusercontent.com/jijoxP/portfolioV1/refs/heads/main/assets/portfolio%20spriteFerm%C3%A9.png");
-loadSprite("bullet", "https://raw.githubusercontent.com/jijoxP/portfolioV1/refs/heads/main/assets/All_Fire_Bullet_Pixel_16x16_07.png");
+loadSprite("portfolioSprite", "assets/portfolioSprite.png");
+loadSprite("bullet", "assets/All_Fire_Bullet_Pixel_16x16_07.png");
 
-// --- Charger JSON séparé ---
-fetch("config.json") 
+// --- Backgrounds (parallax) ---
+const backgrounds = [
+  { name: "bg_background", file: "background.png", speed: 0.1, z: -10 },
+  { name: "bg_clouds2",   file: "clouds2.png",   speed: 0.2, z: -9 },
+  { name: "bg_clouds",    file: "clouds.png",    speed: 0.3, z: -8 },
+  { name: "bg_city_far2", file: "city_far2.png", speed: 0.4, z: -7 },
+  { name: "bg_city_far1", file: "city_far1.png", speed: 0.5, z: -6 },
+  { name: "bg_city",      file: "city.png",      speed: 0.6, z: -5 },
+  { name: "bg_ground",    file: "ground.png",    speed: 0.8, z: -4 }
+];
+backgrounds.forEach(bg => loadSprite(bg.name, "assets/bg/" + bg.file));
+
+// --- Charger config ---
+fetch("config.json")
   .then(res => res.json())
   .then(config => {
-
     setGravity(2000);
     const WALK_SPEED = 200, RUN_SPEED = 400;
 
     scene("main", () => {
+      let score = 0;
 
       // --- Joueur ---
       const player = add([
@@ -46,73 +57,88 @@ fetch("config.json")
       ]);
       player.play("idle");
 
-      // --- Sol collé au bas ---
-      const groundHeight = 48;
-      add([
-        rect(2000, groundHeight),
-        pos(0, height() - groundHeight),
-        color(100,100,200),
-        area(),
-        body({ isStatic:true }),
-        z(0)
-      ]);
-
-      // --- Plateformes ---
-      config.platforms.forEach(p => {
+      // --- Fond parallax ---
+      backgrounds.forEach(bg => {
         add([
-          rect(p.w, p.h),
-          pos(p.x, p.y),
-          color(...p.color),
-          area(),
-          body({ isStatic: p.static }),
-          z(1) // au-dessus du sol/fond
+          sprite(bg.name, { width: width() * 2, height: height() }),
+          pos(0, 0),
+          fixed(),
+          z(bg.z),
+          {
+            update() { this.pos.x = -player.pos.x * bg.speed; }
+          }
         ]);
       });
 
-      // --- Obstacles ---
+      // --- Plateformes ---
+      config.platforms.forEach(p => {
+        const plat = add([rect(p.w,p.h), pos(p.x,p.y), color(...p.color), area(), body({isStatic: p.static}), z(1)]);
+
+        if(p.moving){
+          let dir = 1;
+          plat.onUpdate(()=>{
+            if(p.moving.axis==="x"){ plat.move(p.moving.speed*dir,0); if(plat.pos.x>p.moving.max) dir=-1; if(plat.pos.x<p.moving.min) dir=1; }
+            if(p.moving.axis==="y"){ plat.move(0,p.moving.speed*dir); if(plat.pos.y>p.moving.max) dir=-1; if(plat.pos.y<p.moving.min) dir=1; }
+          });
+        }
+
+        if(p.disappearing){
+          loop(p.disappearing.interval, ()=>{
+            plat.hidden = !plat.hidden;
+            plat.solid = !plat.solid;
+          });
+        }
+      });
+
+      // --- Obstacles (spikes) ---
       if(config.obstacles){
         config.obstacles.forEach(obs=>{
-          const obj = add([
-            rect(obs.w, obs.h),
-            pos(obs.x, obs.y),
-            color(...obs.color),
-            area(),
-            body({ isStatic:true }),
-            z(2)
-          ]);
+          const spike = add([rect(obs.w,obs.h), pos(obs.x,obs.y), color(...obs.color), area(), body({isStatic:true}), "spike"]);
           if(obs.moving){
             let dir = 1;
-            obj.onUpdate(()=>{
-              obj.move(obs.moving.speed*dir,0);
-              if(obj.pos.x>obs.moving.maxX) dir=-1;
-              if(obj.pos.x<obs.moving.minX) dir=1;
+            spike.onUpdate(()=>{
+              if(obs.moving.axis==="x"){ spike.move(obs.moving.speed*dir,0); if(spike.pos.x>obs.moving.max) dir=-1; if(spike.pos.x<obs.moving.min) dir=1; }
+              if(obs.moving.axis==="y"){ spike.move(0,obs.moving.speed*dir); if(spike.pos.y>obs.moving.max) dir=-1; if(spike.pos.y<obs.moving.min) dir=1; }
             });
           }
         });
+        player.onCollide("spike", ()=>{ player.pos = vec2(config.player.startX, config.player.startY); });
+      }
+
+      // --- Trampolines ---
+      if(config.trampolines){
+        config.trampolines.forEach(t=>{
+          add([rect(t.w,t.h), pos(t.x,t.y), color(...t.color), area(), body({isStatic:true}), "trampoline"]);
+        });
+        player.onCollide("trampoline", (t)=>{ player.jump(t.boost||1200); });
+      }
+
+      // --- Collectibles ---
+      if(config.collectibles){
+        config.collectibles.forEach(c=>{
+          add([circle(c.radius), pos(c.x,c.y), color(...c.color), area(), "collectible"]);
+        });
+        player.onCollide("collectible",(col)=>{ destroy(col); score++; debug.log("Score: "+score); });
       }
 
       // --- Projets ---
       config.projects.forEach(proj=>{
         let obj;
         if(proj.type==="sprite"){
-          obj = add([sprite(proj.sprite), pos(proj.x, proj.y), scale(proj.scale), proj.id]);
-          loop(1, ()=>{ obj.scale = vec2(proj.scale-0.01, proj.scale-0.01); wait(0.5, ()=>obj.scale=vec2(proj.scale, proj.scale)); });
+          obj = add([sprite(proj.sprite), pos(proj.x,proj.y), scale(proj.scale), proj.id]);
+          loop(1, ()=>{ obj.scale = vec2(proj.scale-0.01,proj.scale-0.01); wait(0.5, ()=>obj.scale = vec2(proj.scale,proj.scale)); });
         }else{
           obj = add([rect(proj.w,proj.h), pos(proj.x,proj.y), color(...proj.color), area(), proj.id]);
         }
         if(proj.moving){
-          let dir = 1;
-          obj.onUpdate(()=>{ obj.move(proj.moving.speed*dir,0); if(obj.pos.x>proj.moving.maxX) dir=-1; if(obj.pos.x<proj.moving.minX) dir=1; });
+          let dir=1; obj.onUpdate(()=>{ obj.move(proj.moving.speed*dir,0); if(obj.pos.x>proj.moving.maxX) dir=-1; if(obj.pos.x<proj.moving.minX) dir=1; });
         }
-        if(proj.id==="project2"){
-          onCollide("projectile","project2",b=>{destroy(b); go(proj.openScene);});
-        }else{
-          player.onCollide(proj.id, ()=>go(proj.openScene));
-        }
+        if(proj.id==="project2"){ onCollide("projectile","project2",b=>{destroy(b); go(proj.openScene);}); }
+        else{ player.onCollide(proj.id, ()=>go(proj.openScene)); }
       });
 
       // --- Mouvements joueur ---
-      let moveDir = 0;
+      let moveDir=0;
       onKeyDown("left", ()=>moveDir=-1);
       onKeyDown("right", ()=>moveDir=1);
       onKeyRelease("left", ()=>{if(moveDir===-1) moveDir=0;});
@@ -121,7 +147,7 @@ fetch("config.json")
 
       player.onUpdate(()=>{
         const speed = isKeyDown("shift")?RUN_SPEED:WALK_SPEED;
-        player.move(moveDir*speed, 0);
+        player.move(moveDir*speed,0);
         if(moveDir===1 && player.curAnim()!=="walk") player.play("walk");
         else if(moveDir===-1 && player.curAnim()!=="walk2") player.play("walk2");
         else if(moveDir===0 && player.isGrounded() && player.curAnim()!=="idle") player.play("idle");
@@ -130,14 +156,13 @@ fetch("config.json")
       // --- Tir projectiles ---
       onKeyPress("up", ()=>{
         const dir = moveDir>=0?1:-1;
-        const bullet = add([sprite("bullet"), pos(player.pos.x+dir*20, player.pos.y+10), scale(2), area(), "projectile"]);
+        const bullet = add([sprite("bullet"), pos(player.pos.x+dir*20,player.pos.y+10), scale(2), area(), "projectile"]);
         bullet.onUpdate(()=>bullet.move(dir*600,0));
         wait(2, ()=>destroy(bullet));
       });
 
       // --- Caméra ---
       onUpdate(()=>camPos(player.pos));
-
     });
 
     // --- Scènes projets ---

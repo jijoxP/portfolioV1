@@ -1,24 +1,45 @@
 {
   "player": {
     "startX": 100,
-    "startY": 400,
+    "startY": 500,
     "scale": 1.5
   },
   "platforms": [
-    { "x": 0, "y": 550, "w": 2000, "h": 48, "color": [100, 0, 150], "static": true },
-    { "x": 400, "y": 450, "w": 300, "h": 20, "color": [0, 0, 255], "static": true },
-    { "x": 750, "y": 380, "w": 200, "h": 20, "color": [255, 0, 0], "static": true },
-    { "x": 1100, "y": 310, "w": 250, "h": 20, "color": [0, 255, 255], "static": true },
-    { "x": 1450, "y": 250, "w": 300, "h": 20, "color": [255, 255, 0], "static": true },
-    { "x": 1800, "y": 200, "w": 200, "h": 20, "color": [255, 0, 255], "static": true }
+    { "x": 0, "y": 550, "w": 2200, "h": 48, "color": [100, 0, 150], "static": true },
+
+    { "x": 400, "y": 480, "w": 250, "h": 20, "color": [0, 0, 255], "static": true },
+    { "x": 750, "y": 420, "w": 200, "h": 20, "color": [255, 0, 0], "static": true },
+    { "x": 1100, "y": 350, "w": 250, "h": 20, "color": [0, 255, 255], "static": true, "moving": { "axis": "y", "min": 320, "max": 420, "speed": 60 } },
+    { "x": 1450, "y": 300, "w": 200, "h": 20, "color": [255, 255, 0], "static": true, "disappearing": { "interval": 2 } },
+    { "x": 1800, "y": 250, "w": 250, "h": 20, "color": [255, 0, 255], "static": true },
+
+
+    { "x": 2200, "y": 500, "w": 200, "h": 20, "color": [100, 100, 255], "static": true },
+    { "x": 2450, "y": 450, "w": 180, "h": 20, "color": [200, 50, 50], "static": true, "moving": { "axis": "y", "min": 400, "max": 500, "speed": 80 } },
+    { "x": 2700, "y": 400, "w": 200, "h": 20, "color": [50, 200, 50], "static": true, "disappearing": { "interval": 3 } },
+    { "x": 2950, "y": 350, "w": 220, "h": 20, "color": [255, 150, 0], "static": true },
+    { "x": 3200, "y": 300, "w": 250, "h": 20, "color": [150, 0, 200], "static": true, "moving": { "axis": "y", "min": 280, "max": 350, "speed": 60 } }
   ],
   "obstacles": [
-    { "type": "rect", "x": 600, "y": 420, "w": 50, "h": 20, "color": [255, 0, 0], "moving": { "minX": 600, "maxX": 800, "speed": 80 } },
-    { "type": "rect", "x": 1250, "y": 280, "w": 50, "h": 20, "color": [255, 0, 0], "moving": { "minX": 1200, "maxX": 1400, "speed": 100 } }
+    { "type": "spikes", "x": 600, "y": 400, "w": 40, "h": 40, "color": [255, 0, 0], "moving": { "axis": "y", "min": 300, "max": 500, "speed": 100 } },
+    { "type": "spikes", "x": 2500, "y": 420, "w": 40, "h": 40, "color": [255, 0, 0], "moving": { "axis": "y", "min": 350, "max": 450, "speed": 80 } },
+    { "type": "spikes", "x": 3100, "y": 280, "w": 40, "h": 40, "color": [255, 0, 0], "moving": { "axis": "y", "min": 250, "max": 320, "speed": 90 } }
+  ],
+  "trampolines": [
+    { "x": 900, "y": 530, "w": 80, "h": 20, "color": [0, 255, 100], "boost": 1500 },
+    { "x": 2750, "y": 380, "w": 80, "h": 20, "color": [0, 200, 255], "boost": 1600 }
+  ],
+  "collectibles": [
+    { "x": 450, "y": 440, "radius": 10, "color": [255, 255, 0] },
+    { "x": 1150, "y": 310, "radius": 10, "color": [255, 255, 0] },
+    { "x": 1500, "y": 260, "radius": 10, "color": [255, 255, 0] },
+    { "x": 1850, "y": 210, "radius": 10, "color": [255, 255, 0] },
+    { "x": 2450, "y": 430, "radius": 10, "color": [255, 255, 0] },
+    { "x": 2950, "y": 340, "radius": 10, "color": [255, 255, 0] }
   ],
   "projects": [
     { "id": "project1", "type": "sprite", "sprite": "portfolioSprite", "x": 480, "y": 420, "scale": 0.2, "openScene": "project1Scene" },
     { "id": "project2", "type": "rect", "w": 100, "h": 100, "x": 850, "y": 350, "color": [0, 255, 0], "moving": { "minX": 800, "maxX": 1000, "speed": 100 }, "openScene": "project2Scene" },
-    { "id": "project3", "type": "sprite", "sprite": "portfolioSprite", "x": 1620, "y": 180, "scale": 0.2, "openScene": "project3Scene" }
+    { "id": "project3", "type": "sprite", "sprite": "portfolioSprite", "x": 3250, "y": 280, "scale": 0.2, "openScene": "project3Scene" }
   ]
 }
