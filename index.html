@@ -39,142 +39,123 @@ backgrounds.forEach(bg => loadSprite(bg.name, "assets/bg/" + bg.file));
 
 // --- Charger config ---
 fetch("config.json")
-  .then(res => res.json())
-  .then(config => {
+.then(res => res.json())
+.then(config => {
     setGravity(2000);
     const WALK_SPEED = 200, RUN_SPEED = 400;
 
     scene("main", () => {
-      let score = 0;
+        let score = 0;
 
-      // --- Joueur ---
-      const player = add([
-        sprite("hero"),
-        pos(config.player.startX, config.player.startY),
-        scale(config.player.scale),
-        area(),
-        body()
-      ]);
-      player.play("idle");
-
-      // --- Fond parallax ---
-      backgrounds.forEach(bg => {
-        add([
-          sprite(bg.name, { width: width() * 2, height: height() }),
-          pos(0, 0),
-          fixed(),
-          z(bg.z),
-          {
-            update() { this.pos.x = -player.pos.x * bg.speed; }
-          }
+        // --- Joueur ---
+        const player = add([
+            sprite("hero"),
+            pos(config.player.startX, config.player.startY),
+            scale(config.player.scale),
+            area(),
+            body()
         ]);
-      });
+        player.play("idle");
 
-      // --- Plateformes ---
-      config.platforms.forEach(p => {
-        const plat = add([rect(p.w,p.h), pos(p.x,p.y), color(...p.color), area(), body({isStatic: p.static}), z(1)]);
+        // --- Parallax ---
+        backgrounds.forEach(bg => add([
+            sprite(bg.name, { width: width() * 2, height: height() }),
+            pos(0,0), fixed(), z(bg.z),
+            { update() { this.pos.x = -player.pos.x * bg.speed; } }
+        ]));
 
-        if(p.moving){
-          let dir = 1;
-          plat.onUpdate(()=>{
-            if(p.moving.axis==="x"){ plat.move(p.moving.speed*dir,0); if(plat.pos.x>p.moving.max) dir=-1; if(plat.pos.x<p.moving.min) dir=1; }
-            if(p.moving.axis==="y"){ plat.move(0,p.moving.speed*dir); if(plat.pos.y>p.moving.max) dir=-1; if(plat.pos.y<p.moving.min) dir=1; }
-          });
-        }
+        // --- Fonctions utilitaires ---
+        const createPlatform = (p) => {
+            const plat = add([rect(p.w,p.h), pos(p.x,p.y), color(...p.color), area(), body({isStatic: p.static}), z(1)]);
+            if(p.moving){
+                let dir = 1;
+                plat.onUpdate(()=> {
+                    if(p.moving.axis==="x"){ plat.move(p.moving.speed*dir,0); if(plat.pos.x>p.moving.max) dir=-1; if(plat.pos.x<p.moving.min) dir=1; }
+                    if(p.moving.axis==="y"){ plat.move(0,p.moving.speed*dir); if(plat.pos.y>p.moving.max) dir=-1; if(plat.pos.y<p.moving.min) dir=1; }
+                });
+            }
+            if(p.disappearing){
+                loop(p.disappearing.interval, ()=> { plat.hidden = !plat.hidden; plat.solid = !plat.hidden; });
+            }
+        };
 
-        if(p.disappearing){
-          loop(p.disappearing.interval, ()=>{
-            plat.hidden = !plat.hidden;
-            plat.solid = !plat.solid;
-          });
-        }
-      });
+        const createObstacle = (obs) => {
+            const spike = add([rect(obs.w,obs.h), pos(obs.x,obs.y), color(...obs.color), area(), body({isStatic:true}), "spike"]);
+            if(obs.moving){
+                let dir = 1;
+                spike.onUpdate(()=> {
+                    if(obs.moving.axis==="x"){ spike.move(obs.moving.speed*dir,0); if(spike.pos.x>obs.moving.max) dir=-1; if(spike.pos.x<obs.moving.min) dir=1; }
+                    if(obs.moving.axis==="y"){ spike.move(0,obs.moving.speed*dir); if(spike.pos.y>obs.moving.max) dir=-1; if(spike.pos.y<obs.moving.min) dir=1; }
+                });
+            }
+        };
 
-      // --- Obstacles (spikes) ---
-      if(config.obstacles){
-        config.obstacles.forEach(obs=>{
-          const spike = add([rect(obs.w,obs.h), pos(obs.x,obs.y), color(...obs.color), area(), body({isStatic:true}), "spike"]);
-          if(obs.moving){
-            let dir = 1;
-            spike.onUpdate(()=>{
-              if(obs.moving.axis==="x"){ spike.move(obs.moving.speed*dir,0); if(spike.pos.x>obs.moving.max) dir=-1; if(spike.pos.x<obs.moving.min) dir=1; }
-              if(obs.moving.axis==="y"){ spike.move(0,obs.moving.speed*dir); if(spike.pos.y>obs.moving.max) dir=-1; if(spike.pos.y<obs.moving.min) dir=1; }
-            });
-          }
+        const createProject = (proj) => {
+            let obj;
+            if(proj.type==="sprite"){
+                obj = add([sprite(proj.sprite), pos(proj.x,proj.y), scale(proj.scale), proj.id]);
+                loop(1, ()=> { obj.scale = vec2(proj.scale-0.01,proj.scale-0.01); wait(0.5, ()=> obj.scale = vec2(proj.scale,proj.scale)); });
+            } else {
+                obj = add([rect(proj.w,proj.h), pos(proj.x,proj.y), color(...proj.color), area(), proj.id]);
+            }
+            if(proj.moving){
+                let dir = 1;
+                obj.onUpdate(()=>{ obj.move(proj.moving.speed*dir,0); if(obj.pos.x>proj.moving.maxX) dir=-1; if(obj.pos.x<proj.moving.minX) dir=1; });
+            }
+            if(proj.id==="project2") onCollide("projectile","project2",b=>{ destroy(b); go(proj.openScene); });
+            else player.onCollide(proj.id, ()=>go(proj.openScene));
+        };
+
+        // --- Créer les éléments ---
+        config.platforms.forEach(createPlatform);
+        if(config.obstacles){ config.obstacles.forEach(createObstacle); player.onCollide("spike", ()=>{ player.pos = vec2(config.player.startX, config.player.startY); }); }
+        if(config.trampolines){ config.trampolines.forEach(t=>add([rect(t.w,t.h), pos(t.x,t.y), color(...t.color), area(), body({isStatic:true}), "trampoline"])); }
+        player.onCollide("trampoline", t=>player.jump(t.boost||1200));
+        if(config.collectibles){ config.collectibles.forEach(c=>add([circle(c.radius), pos(c.x,c.y), color(...c.color), area(), "collectible"])); }
+        player.onCollide("collectible", col=>{ destroy(col); score++; debug.log("Score: "+score); });
+        if(config.projects){ config.projects.forEach(createProject); }
+
+        // --- Zone de mort ---
+        const deathZone = add([ rect(width()*10, 50), pos(-1000, 590), area(), "deathZone", opacity(0) ]);
+        player.onCollide("deathZone", ()=>{ player.pos = vec2(config.player.startX, config.player.startY); player.vel = vec2(0,0); debug.log("Mort !"); });
+
+        // --- Mouvements joueur ---
+        let moveDir=0;
+        onKeyDown("left", ()=>moveDir=-1);
+        onKeyDown("right", ()=>moveDir=1);
+        onKeyRelease("left", ()=>{if(moveDir===-1) moveDir=0;});
+        onKeyRelease("right", ()=>{if(moveDir===1) moveDir=0;});
+        onKeyPress("space", ()=>{if(player.isGrounded()) player.jump(1000);});
+        player.onUpdate(()=>{
+            const speed = isKeyDown("shift")?RUN_SPEED:WALK_SPEED;
+            player.move(moveDir*speed,0);
+            if(moveDir===1 && player.curAnim()!=="walk") player.play("walk");
+            else if(moveDir===-1 && player.curAnim()!=="walk2") player.play("walk2");
+            else if(moveDir===0 && player.isGrounded() && player.curAnim()!=="idle") player.play("idle");
         });
-        player.onCollide("spike", ()=>{ player.pos = vec2(config.player.startX, config.player.startY); });
-      }
 
-      // --- Trampolines ---
-      if(config.trampolines){
-        config.trampolines.forEach(t=>{
-          add([rect(t.w,t.h), pos(t.x,t.y), color(...t.color), area(), body({isStatic:true}), "trampoline"]);
+        // --- Tir projectiles ---
+        onKeyPress("up", ()=>{
+            const dir = moveDir>=0?1:-1;
+            const bullet = add([sprite("bullet"), pos(player.pos.x+dir*20,player.pos.y+10), scale(2), area(), "projectile"]);
+            bullet.onUpdate(()=>bullet.move(dir*600,0));
+            wait(2, ()=>destroy(bullet));
         });
-        player.onCollide("trampoline", (t)=>{ player.jump(t.boost||1200); });
-      }
 
-      // --- Collectibles ---
-      if(config.collectibles){
-        config.collectibles.forEach(c=>{
-          add([circle(c.radius), pos(c.x,c.y), color(...c.color), area(), "collectible"]);
-        });
-        player.onCollide("collectible",(col)=>{ destroy(col); score++; debug.log("Score: "+score); });
-      }
-
-      // --- Projets ---
-      config.projects.forEach(proj=>{
-        let obj;
-        if(proj.type==="sprite"){
-          obj = add([sprite(proj.sprite), pos(proj.x,proj.y), scale(proj.scale), proj.id]);
-          loop(1, ()=>{ obj.scale = vec2(proj.scale-0.01,proj.scale-0.01); wait(0.5, ()=>obj.scale = vec2(proj.scale,proj.scale)); });
-        }else{
-          obj = add([rect(proj.w,proj.h), pos(proj.x,proj.y), color(...proj.color), area(), proj.id]);
-        }
-        if(proj.moving){
-          let dir=1; obj.onUpdate(()=>{ obj.move(proj.moving.speed*dir,0); if(obj.pos.x>proj.moving.maxX) dir=-1; if(obj.pos.x<proj.moving.minX) dir=1; });
-        }
-        if(proj.id==="project2"){ onCollide("projectile","project2",b=>{destroy(b); go(proj.openScene);}); }
-        else{ player.onCollide(proj.id, ()=>go(proj.openScene)); }
-      });
-
-      // --- Mouvements joueur ---
-      let moveDir=0;
-      onKeyDown("left", ()=>moveDir=-1);
-      onKeyDown("right", ()=>moveDir=1);
-      onKeyRelease("left", ()=>{if(moveDir===-1) moveDir=0;});
-      onKeyRelease("right", ()=>{if(moveDir===1) moveDir=0;});
-      onKeyPress("space", ()=>{if(player.isGrounded()) player.jump(1000);});
-
-      player.onUpdate(()=>{
-        const speed = isKeyDown("shift")?RUN_SPEED:WALK_SPEED;
-        player.move(moveDir*speed,0);
-        if(moveDir===1 && player.curAnim()!=="walk") player.play("walk");
-        else if(moveDir===-1 && player.curAnim()!=="walk2") player.play("walk2");
-        else if(moveDir===0 && player.isGrounded() && player.curAnim()!=="idle") player.play("idle");
-      });
-
-      // --- Tir projectiles ---
-      onKeyPress("up", ()=>{
-        const dir = moveDir>=0?1:-1;
-        const bullet = add([sprite("bullet"), pos(player.pos.x+dir*20,player.pos.y+10), scale(2), area(), "projectile"]);
-        bullet.onUpdate(()=>bullet.move(dir*600,0));
-        wait(2, ()=>destroy(bullet));
-      });
-
-      // --- Caméra ---
-      onUpdate(()=>camPos(player.pos));
+        // --- Caméra ---
+        onUpdate(()=>camPos(player.pos));
     });
 
     // --- Scènes projets ---
     config.projects.forEach(p=>{
-      scene(p.openScene, ()=>{
-        add([text(`${p.id} ouvert !`,{size:32}), pos(center()), anchor("center"), color(255,255,0)]);
-        onKeyPress("escape", ()=>go("main"));
-      });
+        scene(p.openScene, ()=>{
+            add([text(`${p.id} ouvert !`,{size:32}), pos(center()), anchor("center"), color(255,255,0)]);
+            onKeyPress("escape", ()=>go("main"));
+        });
     });
 
     go("main");
-  });
+});
 </script>
 </body>
 </html>
